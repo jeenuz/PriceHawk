@@ -60,7 +60,6 @@ class BooksSpider(scrapy.Spider):
             retailer="books.toscrape.com",
             scraped_at=datetime.now(timezone.utc).isoformat(),
         )
-        print("availability",item.availability)
 
         return item.to_dict()
 

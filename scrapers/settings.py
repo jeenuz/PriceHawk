@@ -19,14 +19,19 @@ COOKIES_ENABLED = False
 # Enable middlewares
 DOWNLOADER_MIDDLEWARES = {
     "scrapers.middlewares.useragent.RotateUserAgentMiddleware": 400,
+    
 }
 
-# Output settings
-FEEDS = {
-    "data/prices_%(time)s.csv": {
-        "format": "csv",
-        "overwrite": False,
-    }
+# Enable database pipeline
+ITEM_PIPELINES = {
+    "scrapers.pipelines.db_pipeline.PostgreSQLPipeline": 300,
 }
+# Output settings
+#FEEDS = {
+#    "data/prices_%(time)s.csv": {
+#       "format": "csv",
+#       "overwrite": False,
+#    }
+#}
 
 LOG_LEVEL = "INFO"
