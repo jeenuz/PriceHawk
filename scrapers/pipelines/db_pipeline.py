@@ -3,6 +3,7 @@ import json
 from loguru import logger
 from db.database import get_session, init_db
 from db.models import Product, Retailer, PriceSnapshot
+from models.product_matcher import ProductMatcher
 
 
 class PostgreSQLPipeline:
@@ -13,6 +14,7 @@ class PostgreSQLPipeline:
         init_db()
         self.session = get_session()
         self._ensure_retailer(spider)
+        self.matcher = ProductMatcher()
         logger.info("PostgreSQL pipeline opened.")
 
     def close_spider(self, spider):
@@ -70,21 +72,52 @@ class PostgreSQLPipeline:
             logger.info(f"Created retailer: {retailer_name}")
 
     def _get_or_create_product(self, item):
-        """Get existing product or create new one."""
+        """
+        Get existing product or create new one.
+        Uses ProductMatcher to find same product
+        across different retailers.
+        """
+        # Step 1 — check by exact URL first (fastest)
         product = self.session.query(Product).filter_by(
             url=item["url"]
         ).first()
 
-        if not product:
-            product = Product(
-                title=item["title"],
-                url=item["url"],
-                retailer_id=self.retailer.id,
-                rating=item.get("rating", "0/5"),
-            )
-            self.session.add(product)
-            self.session.commit()
+        if product:
+            return product
 
+        # Step 2 — check for matching product from other retailers
+        existing_products = self.session.query(Product).filter(
+            Product.retailer_id != self.retailer.id
+        ).all()
+
+        if existing_products:
+            candidate_titles = [p.title for p in existing_products]
+
+            result = self.matcher.find_best_match(
+                item["title"],
+                candidate_titles
+            )
+
+            # High confidence match — link to existing product
+            if result["is_match"] and result["confidence"] == "high":
+                matched = existing_products[result["match_index"]]
+                logger.info(
+                    f"Cross-retailer match: "
+                    f"{item['title'][:30]} "
+                    f"≈ {matched.title[:30]} "
+                    f"(score: {result['score']})"
+                )
+                return matched
+
+        # Step 3 — no match found, create new product
+        product = Product(
+            title=item["title"],
+            url=item["url"],
+            retailer_id=self.retailer.id,
+            rating=item.get("rating", "0/5"),
+        )
+        self.session.add(product)
+        self.session.commit()
         return product
 
     def _generate_hash(self, item) -> str:
