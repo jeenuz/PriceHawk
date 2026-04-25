@@ -35,7 +35,7 @@ class Product(Base):
     title = Column(String(500), nullable=False)
     url = Column(Text, nullable=False)
     retailer_id = Column(Integer, ForeignKey("retailers.id"), nullable=False)
-    rating = Column(String(10), default="0/5")
+    rating = Column(String(50), default="0/5")
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 

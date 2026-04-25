@@ -8,7 +8,6 @@ from loguru import logger
 
 
 def load_csv(filepath: str) -> list[dict]:
-    """Load products from CSV file."""
     products = []
     with open(filepath, "r", encoding="utf-8") as f:
         reader = csv.DictReader(f)
@@ -18,11 +17,6 @@ def load_csv(filepath: str) -> list[dict]:
 
 
 def filter_machines_only(products: list[dict]) -> list[dict]:
-    """
-    Keep only actual dishwasher machines.
-    Filter out detergents, tablets, accessories.
-    Min price ₹5000 — machines cost more than accessories.
-    """
     filtered = []
     for p in products:
         try:
@@ -39,10 +33,6 @@ def match_across_retailers(
     flipkart_products: list[dict],
     matcher: ProductMatcher
 ) -> list[dict]:
-    """
-    Find matching products between Amazon and Flipkart.
-    Returns list of matched pairs with both prices.
-    """
     matches = []
     flipkart_titles = [p["title"] for p in flipkart_products]
 
@@ -53,16 +43,13 @@ def match_across_retailers(
 
     for amazon_product in amazon_products:
         amazon_title = amazon_product["title"]
-
         result = matcher.find_best_match(amazon_title, flipkart_titles)
 
         if result["is_match"]:
             flipkart_product = flipkart_products[result["match_index"]]
-
             amazon_price = float(amazon_product["price"])
             flipkart_price = float(flipkart_product["price"])
 
-            # Find cheaper option
             if amazon_price < flipkart_price:
                 cheaper = "Amazon"
                 saving = flipkart_price - amazon_price
@@ -92,14 +79,14 @@ def match_across_retailers(
                 f"score={result['score']} | "
                 f"Amazon ₹{amazon_price:,.0f} vs "
                 f"Flipkart ₹{flipkart_price:,.0f} | "
-                f"Cheaper: {cheaper} (save ₹{saving:,.0f})"
+                f"Cheaper: {cheaper} "
+                f"(save ₹{saving:,.0f})"
             )
 
     return matches
 
 
 def print_matches(matches: list[dict]):
-    """Print matched products in a readable format."""
     if not matches:
         print("\nNo matches found!")
         return
@@ -120,9 +107,8 @@ def print_matches(matches: list[dict]):
 
 
 def save_matches_csv(matches: list[dict]):
-    """Save matches to CSV."""
     if not matches:
-        return
+        return None
 
     os.makedirs("data", exist_ok=True)
     filepath = "data/dishwasher_price_comparison.csv"
@@ -137,8 +123,8 @@ def save_matches_csv(matches: list[dict]):
 
 
 if __name__ == "__main__":
-    # Find latest CSV files
     data_dir = "data"
+
     amazon_files = sorted([
         f for f in os.listdir(data_dir)
         if f.startswith("amazon_dishwashers")
@@ -153,57 +139,48 @@ if __name__ == "__main__":
         sys.exit(1)
 
     if not flipkart_files:
-        logger.error(
-            "No Flipkart CSV found! Run flipkart_dishwasher.py first"
-        )
+        logger.error("No Flipkart CSV found! Run flipkart_dishwasher.py first")
         sys.exit(1)
 
     amazon_file = os.path.join(data_dir, amazon_files[-1])
     flipkart_file = os.path.join(data_dir, flipkart_files[-1])
 
-    logger.info(f"Loading Amazon data: {amazon_file}")
-    logger.info(f"Loading Flipkart data: {flipkart_file}")
+    logger.info(f"Loading Amazon: {amazon_file}")
+    logger.info(f"Loading Flipkart: {flipkart_file}")
 
-    # Load data
     amazon_products = load_csv(amazon_file)
     flipkart_products = load_csv(flipkart_file)
 
-    logger.info(f"Amazon total: {len(amazon_products)} products")
-    logger.info(f"Flipkart total: {len(flipkart_products)} products")
+    logger.info(f"Amazon total: {len(amazon_products)}")
+    logger.info(f"Flipkart total: {len(flipkart_products)}")
 
-    # Filter machines only — remove detergents
     amazon_machines = filter_machines_only(amazon_products)
     flipkart_machines = filter_machines_only(flipkart_products)
 
     logger.info(f"Amazon machines: {len(amazon_machines)}")
     logger.info(f"Flipkart machines: {len(flipkart_machines)}")
 
-    # Load matcher
     logger.info("Loading SBERT matcher...")
     matcher = ProductMatcher()
 
-    # Find matches
     matches = match_across_retailers(
         amazon_machines,
         flipkart_machines,
         matcher
     )
 
-    # Print results
     print_matches(matches)
 
-    # Save to CSV
     if matches:
         filepath = save_matches_csv(matches)
         print(f"\nSaved to: {filepath}")
 
-        # Summary stats
         savings = [m["saving"] for m in matches if m["saving"] > 0]
         if savings:
             print(f"\n=== SUMMARY ===")
-            print(f"Total matches:     {len(matches)}")
-            print(f"Max saving:        ₹{max(savings):,.0f}")
-            print(f"Avg saving:        ₹{sum(savings)/len(savings):,.0f}")
+            print(f"Total matches:       {len(matches)}")
+            print(f"Max saving:          ₹{max(savings):,.0f}")
+            print(f"Avg saving:          ₹{sum(savings)/len(savings):,.0f}")
             cheaper_amazon = sum(
                 1 for m in matches if m["cheaper_on"] == "Amazon"
             )

@@ -5,33 +5,45 @@ BOT_NAME = "pricehawk"
 SPIDER_MODULES = ["scrapers.spiders"]
 NEWSPIDER_MODULE = "scrapers.spiders"
 
-# Be polite — wait between requests
-DOWNLOAD_DELAY = settings.request_delay
+# Playwright settings
+DOWNLOAD_HANDLERS = {
+    "http": "scrapy_playwright.handler.ScrapyPlaywrightDownloadHandler",
+    "https": "scrapy_playwright.handler.ScrapyPlaywrightDownloadHandler",
+}
+
+PLAYWRIGHT_BROWSER_TYPE = "chromium"
+PLAYWRIGHT_LAUNCH_OPTIONS = {
+    "headless": True,
+    "args": [
+        "--disable-blink-features=AutomationControlled",
+        "--no-sandbox",
+        "--disable-dev-shm-usage",
+    ]
+}
+
+PLAYWRIGHT_DEFAULT_NAVIGATION_TIMEOUT = 30000
+
+TWISTED_REACTOR = "twisted.internet.asyncioreactor.AsyncioSelectorReactor"
+ASYNCIO_EVENT_LOOP = "asyncio.SelectorEventLoop"
+
+# Be polite
+DOWNLOAD_DELAY = 3
 RANDOMIZE_DOWNLOAD_DELAY = True
 
-# Retry failed requests
+# Retry
 RETRY_TIMES = settings.max_retries
 RETRY_HTTP_CODES = [500, 502, 503, 504, 408, 429]
 
-# Disable cookies (less fingerprinting)
 COOKIES_ENABLED = False
 
-# Enable middlewares
+# Middlewares
 DOWNLOADER_MIDDLEWARES = {
     "scrapers.middlewares.useragent.RotateUserAgentMiddleware": 400,
-    
 }
 
-# Enable database pipeline
+# Pipeline
 ITEM_PIPELINES = {
     "scrapers.pipelines.db_pipeline.PostgreSQLPipeline": 300,
 }
-# Output settings
-#FEEDS = {
-#    "data/prices_%(time)s.csv": {
-#       "format": "csv",
-#       "overwrite": False,
-#    }
-#}
 
 LOG_LEVEL = "INFO"
