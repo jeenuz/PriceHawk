@@ -219,7 +219,7 @@ def run_full_pipeline():
         logger.info("=" * 50)
         logger.info("STEP 2: Scraping Amazon...")
         logger.info("=" * 50)
-        amazon_items = scrape_amazon_dishwashers(max_pages=2)
+        amazon_items = scrape_amazon_dishwashers(max_pages=4)
         logger.info(f"Amazon: {len(amazon_items)} items scraped")
 
         amazon_machines = [

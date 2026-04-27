@@ -10,3 +10,4 @@ dist/
 *.log
 *.joblib
 *.pkldata/*.csv
+models/saved/*.joblib
